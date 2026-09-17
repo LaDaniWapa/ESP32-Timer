@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="EMPTY_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/.embuild" />
+      <excludeFolder url="file://$MODULE_DIR$/.embuild/espressif/python_env/idf5.3_py3.14_env/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/.embuild/espressif/python_env/idf5.3_py3.14_env/include" />
+      <excludeFolder url="file://$MODULE_DIR$/.embuild/espressif/python_env/idf5.3_py3.14_env/lib" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
