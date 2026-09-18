@@ -18,7 +18,3 @@ pub fn now_in_tz() ->DateTime<Tz> {
     let utc_now: DateTime<Utc> = SystemTime::now().into();
     utc_now.with_timezone(&Madrid)
 }
-
-pub fn formatted_now() -> String {
-    now_in_tz().format("%d/%m/%Y %H:%M:%S").to_string()
-}

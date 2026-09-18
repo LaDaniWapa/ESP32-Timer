@@ -32,5 +32,5 @@ A desk clock built on an ESP32-S3, written in Rust.
 
 ## Building
 
-See the toolchain setup and wiring notes in [setup.md](setup.md)
+See the toolchain setup and wiring notes in [setup.md](docs/setup.md)
 <!-- ajusta o quita esta línea si no vas a tener ese archivo -->
