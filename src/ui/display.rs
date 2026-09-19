@@ -1,4 +1,5 @@
-use crate::{clock_face, COLOR_1, COLOR_2, COLOR_3, COLOR_5, COLOR_6};
+use crate::ui::clock_face;
+use crate::ui::style::{COLOR_1, COLOR_2, COLOR_3, COLOR_6, STYLE5, STYLE6};
 use embedded_graphics::{
     mono_font::MonoTextStyle,
     pixelcolor::Rgb666,
@@ -6,9 +7,15 @@ use embedded_graphics::{
     primitives::Rectangle,
     text::{Text, TextStyle},
 };
-use embedded_graphics::mono_font::ascii::FONT_10X20;
 use embedded_graphics_framebuf::{backends::FrameBufferBackend, FrameBuf};
-use mipidsi::interface::InterfacePixelFormat;
+use esp_idf_svc::hal::gpio::{Gpio8, Gpio9, Output, PinDriver};
+use esp_idf_svc::hal::spi::{SpiDeviceDriver, SpiDriver};
+use mipidsi::interface::{InterfacePixelFormat, SpiInterface};
+use mipidsi::models::ILI9488Rgb666;
+pub type ConcreteDI<'a> =
+    SpiInterface<'a, SpiDeviceDriver<'a, SpiDriver<'a>>, PinDriver<'a, Gpio9, Output>>;
+pub type ConcreteDisplay<'a> =
+    mipidsi::Display<ConcreteDI<'a>, ILI9488Rgb666, PinDriver<'a, Gpio8, Output>>;
 
 pub const WIDTH: usize = 480;
 pub const HEIGHT: usize = 320;
@@ -34,32 +41,16 @@ impl FrameBufferBackend for VecBackend {
 
 /// Owns the framebuffer and the physical display, plus the text styles,
 /// so callers don't need to pass them into every drawing call.
-pub struct Screen<DI, MODEL, RST>
-where
-    DI: mipidsi::interface::Interface,
-    MODEL: mipidsi::models::Model<ColorFormat = Rgb666>,
-    RST: embedded_hal::digital::OutputPin,
-    Rgb666: InterfacePixelFormat<<DI as mipidsi::interface::Interface>::Word>,
-{
+pub struct Screen {
     fbuf: FrameBuf<Rgb666, VecBackend>,
-    display: mipidsi::Display<DI, MODEL, RST>,
+    display: ConcreteDisplay<'static>,
     style: MonoTextStyle<'static, Rgb666>,
     text_style: TextStyle,
 }
 
-const STYLE5: MonoTextStyle<Rgb666> = MonoTextStyle::new(&FONT_10X20, COLOR_5);
-const STYLE6: MonoTextStyle<Rgb666> = MonoTextStyle::new(&FONT_10X20, COLOR_6);
-
-
-impl<DI, MODEL, RST> Screen<DI, MODEL, RST>
-where
-    DI: mipidsi::interface::Interface,
-    MODEL: mipidsi::models::Model<ColorFormat = Rgb666>,
-    RST: embedded_hal::digital::OutputPin,
-    Rgb666: InterfacePixelFormat<<DI as mipidsi::interface::Interface>::Word>,
-{
+impl Screen {
     pub fn new(
-        display: mipidsi::Display<DI, MODEL, RST>,
+        display: ConcreteDisplay<'static>,
         style: MonoTextStyle<'static, Rgb666>,
         text_style: TextStyle,
     ) -> Self {
@@ -141,7 +132,13 @@ where
 
     /// Draws text with custom style without clearing first, then flushes. Use this after a
     /// manual `clear_area` (e.g. redrawing just the clock).
-    pub fn draw_styled_text(&mut self, text: &str, x: i32, y: i32, style: MonoTextStyle<Rgb666>) -> anyhow::Result<()> {
+    pub fn draw_styled_text(
+        &mut self,
+        text: &str,
+        x: i32,
+        y: i32,
+        style: MonoTextStyle<Rgb666>,
+    ) -> anyhow::Result<()> {
         Text::with_text_style(text, Point::new(x, y), style, self.text_style)
             .draw(&mut self.fbuf)?;
         self.flush()
@@ -188,13 +185,37 @@ where
 
         self.draw_rect(0, 0, WIDTH as u32, 30, COLOR_1)?;
         self.draw_rect(0, (HEIGHT - 36) as i32, WIDTH as u32, 36, COLOR_1)?;
-        self.draw_fake_button(76, (HEIGHT - 31) as i32, 160, 26, COLOR_6, COLOR_2, "CLOCK", STYLE5)?;
-        self.draw_fake_button(244, (HEIGHT - 31) as i32, 160, 26, COLOR_6, COLOR_3, "POMODORO", STYLE6)?;
+        self.draw_fake_button(
+            76,
+            (HEIGHT - 31) as i32,
+            160,
+            26,
+            COLOR_6,
+            COLOR_2,
+            "CLOCK",
+            STYLE5,
+        )?;
+        self.draw_fake_button(
+            244,
+            (HEIGHT - 31) as i32,
+            160,
+            26,
+            COLOR_6,
+            COLOR_3,
+            "POMODORO",
+            STYLE6,
+        )?;
 
         self.flush()
     }
 
-    pub fn update_clock(&mut self, hour: u8, minute: u8, second: u8, date: &str) -> anyhow::Result<()> {
+    pub fn update_clock(
+        &mut self,
+        hour: u8,
+        minute: u8,
+        second: u8,
+        date: &str,
+    ) -> anyhow::Result<()> {
         let time_x = (WIDTH as i32 - clock_face::TIME_WIDTH as i32) / 2;
         let (dyn_x, dyn_y, dyn_w, dyn_h) = (0, 30, WIDTH as u32, HEIGHT as u32 - 66);
 
@@ -207,7 +228,14 @@ where
         self.flush_area(dyn_x, dyn_y, dyn_w, dyn_h)
     }
 
-    pub fn draw_rect(&mut self, x:i32, y:i32, w:u32, h:u32, color: Rgb666) -> anyhow::Result<()> {
+    pub fn draw_rect(
+        &mut self,
+        x: i32,
+        y: i32,
+        w: u32,
+        h: u32,
+        color: Rgb666,
+    ) -> anyhow::Result<()> {
         let area = Rectangle::new(Point::new(x, y), Size::new(w, h));
         self.fbuf.fill_solid(&area, color)?;
         Ok(())
